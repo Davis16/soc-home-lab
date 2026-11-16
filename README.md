@@ -20,12 +20,12 @@ and tuning detections in Elastic, and investigating the alerts end to end.
 
 ## Roadmap
 
-![SOC home lab roadmap](diagrams/soc-home-lab-roadmap.png)
+![SOC home lab roadmap](https://github.com/Davis16/soc-home-lab/blob/main/diagrams/soc-home-lab-roadmap.svg)
 
 | Phase | Focus | Status |
 |---|---|---|
-| 1 | Foundation: hypervisor, lab network, repo | In progress |
-| 2 | SIEM: Elastic Stack on Ubuntu | Planned |
+| 1 | Foundation: hypervisor, lab network, repo | Completed |
+| 2 | SIEM: Elastic Stack on Ubuntu | In Progress |
 | 3 | Windows domain, EDR, and Sysmon | Planned |
 | 4 | Emulate, detect, tune | Planned |
 | 5 | Network layer | Planned |
