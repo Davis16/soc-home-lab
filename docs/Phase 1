@@ -1,0 +1,127 @@
+Phase 1: Foundation
+
+This phase prepares the host PC for the lab: a hypervisor, an isolated lab network, the installer images, and this repository. No virtual machines are built yet; that starts in Phase 2.
+
+What this phase covers
+Checking the host can run virtual machines
+Planning where the VMs and installer images are stored
+Downloading the operating system images
+Installing VMware Workstation Pro
+Creating an isolated lab network with a fixed addressing plan
+Creating the GitHub repository for documentation and detections
+Host hardware
+
+The lab runs on my everyday desktop, so it is sized to fit alongside normal use.
+
+Component	Detail
+CPU	Intel Core i5-8400 (6 cores)
+RAM	16 GB (2 of 4 slots used)
+Storage	SSD (system drive) and a 1.8 TB HDD
+Host OS	Windows 11 Home
+Design decisions
+Decision	Choice	Why
+Hypervisor	VMware Workstation Pro	Free, and its virtual network editor is simple to work with
+SIEM hosting	Self-managed Elastic Stack	Free on the Basic license, and building it is part of the learning
+Network type	NAT	VMs can reach the internet for updates, but devices on my home network cannot reach the VMs
+Elastic VM storage	SSD	Search speed depends on disk speed
+Windows VM and ISO storage	HDD	They need space more than speed
+Ubuntu version	24.04 LTS	The newest LTS (26.04) was not yet on Elastic's support matrix when I built this
+
+RAM is the tightest resource. The planned allocation is 4 GB for the Elastic VM, 2 to 3 GB for the domain controller, and 3 to 4 GB for the Windows workstation, with the rest left for the host. The lab is suspended when I use the PC for anything heavy.
+
+Step 1: Pre-flight checks
+Open Task Manager and go to the Performance tab.
+Under CPU, confirm that "Virtualization" shows "Enabled". If it shows "Disabled", turn on Intel VT-x (or AMD-V) in the BIOS before continuing.
+Under Memory, note how many slots are in use, in case of a later upgrade.
+Under each disk, note whether it is an SSD or HDD and how much space is free.
+Open Settings > System > About and note the Windows edition.
+Step 2: Create the lab folders
+Folder	Drive	Contents
+Lab\VMs	SSD	The Elastic VM
+Lab\VMs	HDD	The Windows VMs
+Lab\ISOs	HDD	Installer images
+
+I freed up the SSD to about 60 to 70 GB so the Elastic VM has room to grow.
+
+Step 3: Download the installer images
+
+All three are saved to Lab\ISOs.
+
+Image	Used for	Source
+Ubuntu Server 24.04 LTS	Elastic VM (Phase 2)	https://ubuntu.com/download/server (under previous releases) or https://releases.ubuntu.com/24.04/
+Windows Server evaluation	Domain controller (Phase 3)	https://www.microsoft.com/en-us/evalcenter/download-windows-server-2025
+Windows 11 Enterprise evaluation	Workstation (Phase 3)	https://www.microsoft.com/en-us/evalcenter/download-windows-11-enterprise
+
+Notes:
+
+The Windows images are free, time-limited evaluations, which is fine for a lab. Microsoft may ask for a short registration form.
+The main Ubuntu download button offers the newest release. Scroll down for 24.04 LTS.
+
+To confirm a download is intact, compare its hash with the value published by the vendor:
+
+powershell
+Get-FileHash "path\to\file.iso" -Algorithm SHA256
+Step 4: Install VMware Workstation Pro
+Create a free account at https://support.broadcom.com and sign in.
+Go to the downloads area and find VMware Workstation Pro for Windows.
+Choose the newest release. I used 26H1u1.
+If the download icon shows "Screening Required", tick the terms checkbox, click the icon, and complete the one-time export compliance form. Then click the icon again.
+Check the installer's hash against the SHA2 value shown on the download page, using the Get-FileHash command above.
+Run the installer with the default options and restart if prompted.
+
+No license key is needed.
+
+Then set where new VMs are stored: Edit > Preferences > Workspace, and set the default location to Lab\VMs on the HDD. The Elastic VM is placed on the SSD by hand when it is created.
+
+Step 5: Build the lab network
+In VMware, open Edit > Virtual Network Editor.
+Click "Change Settings" and approve the administrator prompt.
+Select the VMnet8 row (type NAT).
+Set Subnet IP to 10.10.10.0 and Subnet mask to 255.255.255.0.
+Click "NAT Settings" and confirm the Gateway IP is 10.10.10.2.
+Click "DHCP Settings" and set the range to 10.10.10.100 through 10.10.10.200.
+Click Apply, then OK.
+
+The DHCP range is kept away from the low addresses so the servers can use fixed ones.
+
+Addressing plan
+Host	Address
+Host PC (VMnet8 adapter)	10.10.10.1
+Gateway and DNS (VMware NAT)	10.10.10.2
+Elastic VM	10.10.10.10
+Domain controller	10.10.10.20
+Windows workstation	10.10.10.30
+DHCP pool	10.10.10.100 to 10.10.10.200
+Verify
+
+Run ipconfig in PowerShell on the host. The adapter named "VMware Network Adapter VMnet8" should show:
+
+IPv4 Address. . . . . . . . . . . : 10.10.10.1
+Subnet Mask . . . . . . . . . . . : 255.255.255.0
+Default Gateway . . . . . . . . . :
+
+The empty default gateway is expected. The host uses its normal connection for internet access; only the VMs use 10.10.10.2.
+
+ipconfig output showing VMnet8
+
+Virtual Network Editor settings
+
+Step 6: Create the repository
+At https://github.com, create a public repository named soc-home-lab with a README.
+GitHub has no "new folder" button. Use Add file > Create new file and type a path such as docs/README.md; the slash creates the folder.
+Repeat for detections/README.md and diagrams/README.md.
+Upload the roadmap image to diagrams/.
+Completion checklist
+[x] Virtualization confirmed enabled
+[x] Lab folders created on both drives
+[x] Three installer images downloaded
+[x] VMware Workstation Pro installed
+[x] VMnet8 set to 10.10.10.0/24 and verified with ipconfig
+[x] Repository created with docs, detections, and diagrams
+Lessons learned
+Check vendor support before picking an OS version. The newest Ubuntu LTS was not the right choice because Elastic had not yet listed it as supported.
+Storage placement matters on mixed drives. Putting only the disk-sensitive VM on the SSD made the lab fit without buying hardware.
+Reserving fixed addresses up front avoids rework once agents and domain members depend on them.
+Next: Phase 2
+
+Build the Ubuntu VM at 10.10.10.10 and install Elasticsearch, Kibana, and Fleet Server.
